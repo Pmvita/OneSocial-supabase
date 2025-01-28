@@ -167,13 +167,13 @@ To get a local copy up and running follow these simple example steps.
     <!-- Cross-platform Welcome Screen -->
       <td>
         <img 
-          src="../OneSoc-supabase/images/ios-ss1.png" 
+          src="./images/ios-ss1.png" 
           alt="iOS Welcome Screen" 
           width="100" 
           height="auto"
         />
         <img 
-          src="../OneSoc-supabase/images/and-ss1.png" 
+          src="./images/and-ss1.png" 
           alt="Android Welcome Screen" 
           width="100" 
           height="auto"
@@ -182,13 +182,13 @@ To get a local copy up and running follow these simple example steps.
       <!-- Cross-platform Login Screen -->
       <td>
         <img
-          src="../OneSoc-supabase/images/ios-ss2.png" 
+          src="./images/ios-ss2.png" 
           alt="iOS Sign-In Screen" 
           width="100"
           height="auto"
         />
         <img
-          src="../OneSoc-supabase/images/and-ss2.png"
+          src="./images/and-ss2.png"
           alt="Android Sign-In Screen" 
           width="100" 
           height="auto"
@@ -197,13 +197,13 @@ To get a local copy up and running follow these simple example steps.
       <!-- Cross-platform Sign-Up Screen -->
       <td>
         <img
-          src="../OneSoc-supabase/images/ios-ss3.png"
+          src="./images/ios-ss3.png"
           alt="iOS Sign-Up Screen"
           width="100"
           height="auto"
         />
         <img
-          src="../OneSoc-supabase/images/and-ss3.png"
+          src="./images/and-ss3.png"
           alt="Android Sign-Up Screen"
           width="100"
           height="auto"
@@ -211,12 +211,12 @@ To get a local copy up and running follow these simple example steps.
       </td>
       <!-- Cross-platform ForgotPassword Screen -->
       <td>
-        <img src="../OneSoc-supabase/images/ios-ss4.png" 
+        <img src="./images/ios-ss4.png" 
           alt="iOS Forgot Password Screen"
           width="100"
           height="auto"
         />
-        <img src="../OneSoc-supabase/images/and-ss4.png" 
+        <img src="./images/and-ss4.png" 
           alt="Android Forgot Password Screen"
           width="100"
           height="auto"
@@ -227,13 +227,13 @@ To get a local copy up and running follow these simple example steps.
     <tr>
       <td>
         <img
-          src="../OneSoc-supabase/images/ios-ss5.png"
+          src="./images/ios-ss5.png"
           alt="Home Screen"
           width="100"
           height="auto"
         />
         <img
-          src="../OneSoc-supabase/images/and-ss5.png"
+          src="./images/and-ss5.png"
           alt="Home Screen"
           width="100"
           height="auto"
@@ -242,13 +242,13 @@ To get a local copy up and running follow these simple example steps.
       <!-- Cross-platform Messages Screen -->
       <td>
         <img 
-          src="../OneSoc-supabase/images/ios-ss6.png"
+          src="./images/ios-ss6.png"
           alt="Messages Screen"
           width="100"
           height="auto"
         />
         <img 
-          src="../OneSoc-supabase/images/and-ss6.png"
+          src="./images/and-ss6.png"
           alt="Messages Screen"
           width="100"
           height="auto"
@@ -257,13 +257,13 @@ To get a local copy up and running follow these simple example steps.
       <!-- Cross-platform Wallet Screen -->
       <td>
         <img 
-          src="../OneSoc-supabase/images/ios-ss7.png"
+          src="./images/ios-ss7.png"
           alt="Wallet Screen"
           width="100"
           height="auto"
         />
         <img 
-          src="../OneSoc-supabase/images/and-ss7.png"
+          src="./images/and-ss7.png"
           alt="Wallet Screen"
           width="100"
           height="auto"
@@ -272,13 +272,13 @@ To get a local copy up and running follow these simple example steps.
       <!-- Cross-platform Settings Screen -->
       <td>
         <img
-          src="../OneSoc-supabase/images/ios-ss8.png"
+          src="./images/ios-ss8.png"
           alt="Settings Screen"
           width="100"
           height="auto"
         />
         <img
-          src="../OneSoc-supabase/images/and-ss8.png"
+          src="./images/and-ss8.png"
           alt="Settings Screen"
           width="100"
           height="auto"
