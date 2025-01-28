@@ -136,7 +136,7 @@ To get a local copy up and running follow these simple example steps.
 
 1. Clone the repo
    ```sh
-   git clone https://github.com/pierremvita/OneSocial-supabase.git
+   git clone https://github.com/Pmvita/OneSocial-supabase.git
    ```
 2. Install Yarn packages
    ```sh
@@ -364,7 +364,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 Pierre Mvita - [@twitter_handle](https://twitter.com/twitter_handle) - PeterMvita@hotmail.com
 
-Project Link: [https://github.com/github_username/repo_name](https://github.com/github_username/repo_name)
+Project Link: [https://github.com/Pmvita/OneSocial-supabase.git](https://github.com/Pmvita/OneSocial-supabase.git)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
