@@ -44,7 +44,7 @@ const SignUp = ({ navigation }) => {
         <AntDesign name="leftcircle" size={24} color="#137DC5" />
       </TouchableOpacity>
       <Image 
-        source={require('../../../OneSoc-supabase/images/OneSocial.png')} 
+        source={require('../../images/OneSocial.png')} 
         style={styles.logo} 
       />
 
