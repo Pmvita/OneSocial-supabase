@@ -1,4 +1,4 @@
-// /screens/HomeScreen.tsx
+// app/(tabs)/index.tsx
 import React, { useState, useEffect } from 'react';
 import { 
   View, 
@@ -41,11 +41,9 @@ const HomeScreen = () => {
   const fetchUser = async () => {
     try {
       const { data, error } = await supabase.auth.getUser();
-
       if (error) {
         throw new Error(error.message);
       }
-
       setUser(data.user);
       fetchProfile(data.user.id);
     } catch (error: any) {
@@ -62,11 +60,9 @@ const HomeScreen = () => {
         .select('*')
         .eq('id', userId)
         .single();
-
       if (error) {
         throw new Error(error.message);
       }
-
       setProfile(data);
       setLoading(false);
     } catch (error: any) {
@@ -82,17 +78,14 @@ const HomeScreen = () => {
         setUser(session.user);
       }
     });
-
     return () => {
       subscription.unsubscribe();
     };
   };
-
   useEffect(() => {
     handleAuthStateChange(); // Listen for auth state changes
     fetchUser(); // Fetch user initially
   }, []);
-
   if (loading) {
     return (
       <View style={styles.loading}>
@@ -208,11 +201,6 @@ const styles = StyleSheet.create({
   info: {
     textAlign: 'center',
     fontSize: 16,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 5,
   },
 });
 

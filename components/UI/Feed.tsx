@@ -57,7 +57,6 @@ const Feed = () => {
         posts: userPosts, // Attach the posts to the profile
       };
     });
-
     setCombinedData(combined);
   };
 
@@ -67,12 +66,14 @@ const Feed = () => {
     fetchPosts();
   }, []);
 
+  // Combine profiles and posts
   useEffect(() => {
     if (profiles.length > 0 && posts.length > 0) {
       combineProfilesAndPosts(); // Combine data after both profiles and posts are fetched
     }
   }, [profiles, posts]);
 
+  // Loading
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -89,6 +90,7 @@ const Feed = () => {
     );
   }
 
+  // Return the Feed
   return (
     <View style={styles.container}>
       <FlatList
@@ -96,7 +98,7 @@ const Feed = () => {
         renderItem={({ item }) => (
           <View style={styles.profileContainer}>
             <Image
-              source={item.profilePic ? { uri: item.profilePic } : require('../../assets/splash-icon.png')}
+              source={item.profilePic ? { uri: item.profilePic } : require('../../images/placeholder.png')}
               style={styles.profilePic}
             />
             <View>
@@ -135,7 +137,8 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: 16,
     backgroundColor: '#fff',
-    height: '100%',
+    //height: '100%',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
