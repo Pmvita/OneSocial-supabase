@@ -107,6 +107,14 @@ interface UserProfile {
   notification_enabled?: boolean;
 }
 
+// Add wallet types
+interface WalletSettings {
+  notifications_enabled: boolean;
+  default_currency: string;
+  transaction_limit: number;
+  require_2fa: boolean;
+}
+
 const SettingsScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const { theme, toggleTheme } = useTheme() as { theme: ThemeType; toggleTheme: () => void };
@@ -115,6 +123,12 @@ const SettingsScreen = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
+  const [walletSettings, setWalletSettings] = useState<WalletSettings>({
+    notifications_enabled: true,
+    default_currency: 'USD',
+    transaction_limit: 1000,
+    require_2fa: false
+  });
 
   // Fetch user profile
   const fetchProfile = async () => {
@@ -138,8 +152,47 @@ const SettingsScreen = () => {
     }
   };
 
+  // Fetch wallet settings
+  const fetchWalletSettings = async () => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
+      const { data, error } = await supabase
+        .from('wallet_settings')
+        .select('*')
+        .eq('profile_id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        throw error;
+      }
+
+      if (data) {
+        setWalletSettings(data);
+      } else {
+        // Create default settings if none exist
+        const { error: createError } = await supabase
+          .from('wallet_settings')
+          .insert([{
+            profile_id: user?.id,
+            notifications_enabled: true,
+            default_currency: 'USD',
+            transaction_limit: 1000,
+            require_2fa: false
+          }]);
+
+        if (createError) throw createError;
+      }
+    } catch (error: any) {
+      console.error('Error fetching wallet settings:', error);
+      Alert.alert('Error', 'Failed to load wallet settings');
+    }
+  };
+
   useEffect(() => {
     fetchProfile();
+    fetchWalletSettings();
   }, []);
 
   // Handle image upload
@@ -215,6 +268,30 @@ const SettingsScreen = () => {
     } finally {
       setSaving(false);
       setEditMode(false);
+    }
+  };
+
+  // Update wallet settings
+  const updateWalletSettings = async (updates: Partial<WalletSettings>) => {
+    try {
+      setSaving(true);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
+      const { error } = await supabase
+        .from('wallet_settings')
+        .update(updates)
+        .eq('profile_id', user?.id);
+
+      if (error) throw error;
+
+      setWalletSettings(prev => ({ ...prev, ...updates }));
+      Alert.alert('Success', 'Wallet settings updated successfully');
+    } catch (error: any) {
+      console.error('Error updating wallet settings:', error);
+      Alert.alert('Error', 'Failed to update wallet settings');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -349,6 +426,85 @@ const SettingsScreen = () => {
           </View>
         </View>
 
+        {/* Wallet Settings Section */}
+        <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            Wallet Settings
+          </Text>
+          
+          <View style={styles.settingItem}>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>
+                Transaction Notifications
+              </Text>
+              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
+                Receive notifications for wallet transactions
+              </Text>
+            </View>
+            <Switch
+              value={walletSettings.notifications_enabled}
+              onValueChange={(value) => updateWalletSettings({ notifications_enabled: value })}
+              trackColor={{ false: '#767577', true: theme.colors.primary }}
+            />
+          </View>
+
+          <TouchableOpacity 
+            style={styles.settingItem}
+            onPress={() => {
+              Alert.prompt(
+                'Transaction Limit',
+                'Set your daily transaction limit',
+                [
+                  {
+                    text: 'Cancel',
+                    style: 'cancel'
+                  },
+                  {
+                    text: 'Update',
+                    onPress: (value?: string) => {
+                      if (!value) return;
+                      const limit = parseFloat(value);
+                      if (!isNaN(limit) && limit > 0) {
+                        updateWalletSettings({ transaction_limit: limit });
+                      } else {
+                        Alert.alert('Invalid Input', 'Please enter a valid amount');
+                      }
+                    }
+                  }
+                ],
+                'plain-text',
+                walletSettings.transaction_limit.toString()
+              );
+            }}
+          >
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>
+                Transaction Limit
+              </Text>
+              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
+                ${walletSettings.transaction_limit.toFixed(2)} per day
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={theme.colors.textSecondary} />
+          </TouchableOpacity>
+
+          <View style={styles.settingItem}>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>
+                Require 2FA for Transactions
+              </Text>
+              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
+                Additional security for transactions
+              </Text>
+            </View>
+            <Switch
+              value={walletSettings.require_2fa}
+              onValueChange={(value) => updateWalletSettings({ require_2fa: value })}
+              trackColor={{ false: '#767577', true: theme.colors.primary }}
+            />
+          </View>
+        </View>
+
         {/* Preferences Section */}
         <View style={[styles.section, { backgroundColor: theme.colors.card }]}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Preferences</Text>
@@ -439,21 +595,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   section: {
+    marginTop: 16,
     marginHorizontal: 16,
-    marginBottom: 16,
     borderRadius: 12,
-    padding: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+    overflow: 'hidden',
   },
   avatarContainer: {
     alignItems: 'center',
@@ -499,7 +644,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 16,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
   preferenceItem: {
     flexDirection: 'row',
@@ -525,6 +672,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderBottomWidth: 0,
     marginTop: 8,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  settingInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  settingLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  settingDescription: {
+    fontSize: 14,
+    marginTop: 4,
   },
 });
 

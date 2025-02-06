@@ -8,60 +8,141 @@ import ProfileScreen from '../app/(tabs)/Profile';
 import NotificationsScreen from '../app/(tabs)/Notifications';
 import SettingsScreen from '../app/(tabs)/Settings';
 import CreateStoryScreen from '../screens/CreateStory';
+import NewMessageScreen from '../screens/NewMessage';
+import AuthScreen from '../app/(auth)/Auth';
+import WalletScreen from '../app/(tabs)/Wallet';
+
+// Import custom components
+import { HapticTab } from '../components/Common/HapticTab';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const TabNavigator = () => {
+const MainTabs = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        tabBarButton: (props) => <HapticTab {...props} />,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
-          if (route.name === 'HomeTab') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'person' : 'person-outline';
-          } else if (route.name === 'Notifications') {
-            iconName = focused ? 'notifications' : 'notifications-outline';
-          } else if (route.name === 'Settings') {
-            iconName = focused ? 'settings' : 'settings-outline';
+          switch (route.name) {
+            case 'Feed':
+              iconName = focused ? 'home' : 'home-outline';
+              break;
+            case 'Wallet':
+              iconName = focused ? 'wallet' : 'wallet-outline';
+              break;
+            case 'Profile':
+              iconName = focused ? 'person' : 'person-outline';
+              break;
+            case 'Notifications':
+              iconName = focused ? 'notifications' : 'notifications-outline';
+              break;
+            case 'Settings':
+              iconName = focused ? 'settings' : 'settings-outline';
+              break;
+            default:
+              iconName = 'help-outline';
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
+        tabBarActiveTintColor: '#6200EE',
+        tabBarInactiveTintColor: '#757575',
+        tabBarStyle: {
+          borderTopWidth: 1,
+          borderTopColor: '#E0E0E0',
+          elevation: 0,
+          shadowOpacity: 0,
+        },
       })}
     >
       <Tab.Screen 
-        name="HomeTab" 
+        name="Feed" 
         component={HomeScreen}
         options={{ 
-          title: 'Home',
-          headerShown: false 
+          headerShown: false,
+          tabBarLabel: 'Home'
         }}
       />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-      <Tab.Screen name="Notifications" component={NotificationsScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen 
+        name="Wallet" 
+        component={WalletScreen}
+        options={{ 
+          headerShown: false,
+          tabBarLabel: 'Wallet'
+        }}
+      />
+      <Tab.Screen 
+        name="Profile" 
+        component={ProfileScreen}
+        options={{
+          headerShown: false,
+          tabBarLabel: 'Profile'
+        }}
+      />
+      <Tab.Screen 
+        name="Notifications" 
+        component={NotificationsScreen}
+        options={{
+          headerShown: false,
+          tabBarLabel: 'Notifications'
+        }}
+      />
+      <Tab.Screen 
+        name="Settings" 
+        component={SettingsScreen}
+        options={{
+          headerShown: false,
+          tabBarLabel: 'Settings'
+        }}
+      />
     </Tab.Navigator>
   );
 };
 
 const AppNavigator = () => {
   return (
-    <Stack.Navigator>
-      <Stack.Screen
-        name="MainTabs"
-        component={TabNavigator}
-        options={{ headerShown: false }}
+    <Stack.Navigator 
+      initialRouteName="/(auth)/sign-in"
+      screenOptions={{
+        headerShown: false
+      }}
+    >
+      <Stack.Screen 
+        name="/(auth)/sign-in" 
+        component={AuthScreen}
+        options={{
+          headerShown: false,
+          gestureEnabled: false
+        }}
+      />
+      <Stack.Screen 
+        name="/(app)" 
+        component={MainTabs}
+        options={{
+          headerShown: false,
+          gestureEnabled: false
+        }}
       />
       <Stack.Screen
-        name="CreateStory"
+        name="/(modals)/create-story"
         component={CreateStoryScreen}
-        options={{ presentation: 'modal' }}
+        options={{ 
+          presentation: 'modal',
+          headerShown: true
+        }}
       />
-      {/* Add other modal screens here */}
+      <Stack.Screen
+        name="/(modals)/new-message"
+        component={NewMessageScreen}
+        options={{
+          presentation: 'modal',
+          headerShown: true,
+          title: 'New Message',
+        }}
+      />
     </Stack.Navigator>
   );
 };

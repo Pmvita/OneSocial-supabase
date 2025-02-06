@@ -1,25 +1,84 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { ThemedText } from '../Common/ThemedText';
+import { useTheme } from '../../context/ThemeContext';
 
+interface CustomButtonProps {
+  title: string;
+  onPress: () => void;
+  loading?: boolean;
+  variant?: 'primary' | 'secondary' | 'outline';
+  disabled?: boolean;
+}
 
+const CustomButton: React.FC<CustomButtonProps> = ({
+  title,
+  onPress,
+  loading = false,
+  variant = 'primary',
+  disabled = false,
+}) => {
+  const { theme } = useTheme();
 
-const CustomButton = ({ title, onPress }: { title: string; onPress: () => void }) => (
-  <TouchableOpacity style={styles.button} onPress={onPress}>
-    <Text style={styles.text}>{title}</Text>
-  </TouchableOpacity>
-);
+  const getButtonStyle = () => {
+    switch (variant) {
+      case 'secondary':
+        return [styles.button, { backgroundColor: theme.colors.secondary }];
+      case 'outline':
+        return [
+          styles.button,
+          {
+            backgroundColor: 'transparent',
+            borderWidth: 1,
+            borderColor: theme.colors.primary,
+          },
+        ];
+      default:
+        return [styles.button, { backgroundColor: theme.colors.primary }];
+    }
+  };
+
+  const getTextColor = () => {
+    if (variant === 'outline') {
+      return theme.colors.primary;
+    }
+    return '#FFFFFF';
+  };
+
+  return (
+    <TouchableOpacity
+      style={[
+        getButtonStyle(),
+        disabled && { opacity: 0.5 },
+      ]}
+      onPress={onPress}
+      disabled={disabled || loading}
+    >
+      {loading ? (
+        <ActivityIndicator color={getTextColor()} />
+      ) : (
+        <ThemedText
+          variant="body"
+          style={styles.text}
+          color={getTextColor()}
+        >
+          {title}
+        </ThemedText>
+      )}
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#847BFF',
-    padding: 12,
+    padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginVertical: 5,
+    justifyContent: 'center',
+    minHeight: 50,
   },
   text: {
-    color: '#fff',
-    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
