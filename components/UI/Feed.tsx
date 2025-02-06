@@ -42,15 +42,58 @@ interface Post {
   user_id: string;
   created_at: string;
   updated_at: string;
+  is_liked?: boolean;
 }
 
 interface FeedProps {
   currentUser: User | null;
 }
 
-const FeedItem: React.FC<{ profile: Profile; fadeAnim: Animated.Value }> = ({ profile, fadeAnim }) => {
+const FeedItem: React.FC<{ 
+  profile: Profile; 
+  fadeAnim: Animated.Value;
+  currentUser: User | null;
+  onLike: (postId: string) => Promise<void>;
+}> = ({ profile, fadeAnim, currentUser, onLike }) => {
   const { theme } = useTheme();
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const [likedPosts, setLikedPosts] = useState<{ [key: string]: boolean }>({});
+  const [likingInProgress, setLikingInProgress] = useState<{ [key: string]: boolean }>({});
+
+  // Animation for like button press
+  const handleLikePress = async (postId: string) => {
+    if (likingInProgress[postId]) return; // Prevent multiple rapid presses
+
+    try {
+      setLikingInProgress(prev => ({ ...prev, [postId]: true }));
+
+      // Animate the button press
+      Animated.sequence([
+        Animated.spring(scaleAnim, {
+          toValue: 0.8,
+          useNativeDriver: true,
+          speed: 50,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          speed: 50,
+        }),
+      ]).start();
+
+      // Toggle like state optimistically
+      setLikedPosts(prev => ({ ...prev, [postId]: !prev[postId] }));
+
+      // Call the onLike handler
+      await onLike(postId);
+    } catch (error) {
+      // Revert optimistic update if there's an error
+      setLikedPosts(prev => ({ ...prev, [postId]: !prev[postId] }));
+      console.error('Error liking post:', error);
+    } finally {
+      setLikingInProgress(prev => ({ ...prev, [postId]: false }));
+    }
+  };
 
   useEffect(() => {
     Animated.parallel([
@@ -151,13 +194,24 @@ const FeedItem: React.FC<{ profile: Profile; fadeAnim: Animated.Value }> = ({ pr
             accessibilityRole="menubar"
           >
             <Pressable 
-              style={styles.actionButton}
+              style={[styles.actionButton, likingInProgress[post.id] && styles.actionButtonDisabled]}
+              onPress={() => handleLikePress(post.id)}
+              disabled={likingInProgress[post.id] || !currentUser}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel={`Like post. ${post.likes || 0} likes`}
+              accessibilityLabel={`${likedPosts[post.id] ? 'Unlike' : 'Like'} post. ${post.likes || 0} likes`}
             >
-              <Ionicons name="heart-outline" size={24} color={theme.colors.text} />
-              <Text style={[styles.actionText, { color: theme.colors.secondary }]}>
+              <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                <Ionicons 
+                  name={likedPosts[post.id] ? "heart" : "heart-outline"} 
+                  size={24} 
+                  color={likedPosts[post.id] ? theme.colors.error : theme.colors.text} 
+                />
+              </Animated.View>
+              <Text style={[
+                styles.actionText, 
+                { color: likedPosts[post.id] ? theme.colors.error : theme.colors.secondary }
+              ]}>
                 {post.likes || 0}
               </Text>
             </Pressable>
@@ -211,7 +265,31 @@ const Feed: React.FC<FeedProps> = ({ currentUser }) => {
     }
   };
 
-  // Fetch all posts with user information
+  // Check if user has liked posts
+  const checkLikedPosts = async (posts: Post[]) => {
+    if (!currentUser) return posts;
+
+    try {
+      const { data: likes, error } = await supabase
+        .from('likes')
+        .select('post_id')
+        .eq('user_id', currentUser.id);
+
+      if (error) throw error;
+
+      const likedPostIds = new Set(likes?.map(like => like.post_id));
+      
+      return posts.map(post => ({
+        ...post,
+        is_liked: likedPostIds.has(post.id)
+      }));
+    } catch (error) {
+      console.error('Error checking liked posts:', error);
+      return posts;
+    }
+  };
+
+  // Fetch all posts with user information and likes
   const fetchPosts = async () => {
     try {
       const { data, error } = await supabase
@@ -223,11 +301,22 @@ const Feed: React.FC<FeedProps> = ({ currentUser }) => {
             username,
             full_name,
             avatar_url
-          )
+          ),
+          likes:likes(count)
         `)
         .order('created_at', { ascending: false });
+
       if (error) throw error;
-      setPosts(data || []);
+
+      // Transform the data to include like count
+      const postsWithLikes = data?.map(post => ({
+        ...post,
+        likes: post.likes[0]?.count || 0
+      }));
+
+      // Check which posts are liked by the current user
+      const postsWithLikeStatus = await checkLikedPosts(postsWithLikes || []);
+      setPosts(postsWithLikeStatus);
     } catch (error: any) {
       console.error('Error fetching posts:', error.message);
       Alert.alert('Error', 'Could not fetch posts.');
@@ -236,7 +325,7 @@ const Feed: React.FC<FeedProps> = ({ currentUser }) => {
     }
   };
 
-  // Like a post
+  // Handle like/unlike post
   const handleLikePost = async (postId: string) => {
     if (!currentUser) return;
     
@@ -274,7 +363,7 @@ const Feed: React.FC<FeedProps> = ({ currentUser }) => {
       }
 
       // Refresh posts to update like count
-      fetchPosts();
+      await fetchPosts();
     } catch (error: any) {
       console.error('Error handling like:', error.message);
       Alert.alert('Error', 'Could not process like.');
@@ -341,7 +430,9 @@ const Feed: React.FC<FeedProps> = ({ currentUser }) => {
   const renderItem = ({ item, index }: { item: Profile; index: number }) => (
     <FeedItem 
       profile={item} 
-      fadeAnim={new Animated.Value(0)} 
+      fadeAnim={new Animated.Value(0)}
+      currentUser={currentUser}
+      onLike={handleLikePost}
     />
   );
 
@@ -480,6 +571,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingVertical: 8,
+  },
+  actionButtonDisabled: {
+    opacity: 0.5,
   },
 });
 

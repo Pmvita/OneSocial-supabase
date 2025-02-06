@@ -197,12 +197,8 @@ const HomeScreen = () => {
           </View>
         </View>
 
-        <ScrollView
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {/* Stories Section */}
+        {/* Stories Section */}
+        <View style={styles.storiesSection}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -234,10 +230,12 @@ const HomeScreen = () => {
               />
             ))}
           </ScrollView>
+        </View>
 
-          {/* Feed with user prop */}
+        {/* Feed Section */}
+        <View style={styles.feedContainer}>
           <Feed currentUser={user} />
-        </ScrollView>
+        </View>
       </ErrorBoundary>
     </SafeAreaView>
   );
@@ -330,6 +328,14 @@ const styles = StyleSheet.create({
     borderRadius: STORY_SIZE / 2,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  storiesSection: {
+    height: STORY_SIZE + 60,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  feedContainer: {
+    flex: 1,
   },
 });
 
