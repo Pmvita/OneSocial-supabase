@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -8,14 +8,22 @@ import {
   Alert, 
   Platform,
   RefreshControl,
-  ActivityIndicator,
   Pressable,
-  Animated
+  Animated,
+  Easing
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import supabase from '../../lib/supabase';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import LoadingState from './LoadingState';
+import ErrorBoundary from './ErrorBoundary';
+
+interface User {
+  id: string;
+  email: string;
+  created_at: string;
+}
 
 interface Profile {
   id: string;
@@ -32,73 +40,267 @@ interface Post {
   likes?: number;
   comments?: number;
   user_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
-const Feed = () => {
+interface FeedProps {
+  currentUser: User | null;
+}
+
+const FeedItem: React.FC<{ profile: Profile; fadeAnim: Animated.Value }> = ({ profile, fadeAnim }) => {
+  const { theme } = useTheme();
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 8,
+        useNativeDriver: true,
+      })
+    ]).start();
+  }, [fadeAnim]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.profileContainer,
+        { 
+          backgroundColor: theme.colors.background,
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }]
+        }
+      ]}
+      accessible={true}
+      accessibilityRole="none"
+      accessibilityLabel={`Post by ${profile.full_name || 'user'}`}
+    >
+      <View style={styles.profileHeader}>
+        <View 
+          style={styles.profileInfo}
+          accessible={true}
+          accessibilityRole="header"
+        >
+          <Image
+            source={profile.avatar_url 
+              ? { uri: profile.avatar_url } 
+              : require('../../assets/default-avatar.png')}
+            style={styles.profileImage}
+            accessible={true}
+            accessibilityLabel={`${profile.full_name || 'User'}'s profile picture`}
+          />
+          <View style={styles.nameContainer}>
+            <Text 
+              style={[styles.profileName, { color: theme.colors.text }]}
+              accessibilityRole="text"
+            >
+              {profile.full_name || 'Full Name'}
+            </Text>
+            <Text 
+              style={[styles.username, { color: theme.colors.secondary }]}
+              accessibilityRole="text"
+            >
+              @{profile.username || 'user'}
+            </Text>
+          </View>
+        </View>
+        <Pressable 
+          style={styles.moreButton}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="More options"
+          accessibilityHint="Opens post options menu"
+        >
+          <Ionicons name="ellipsis-horizontal" size={24} color={theme.colors.text} />
+        </Pressable>
+      </View>
+
+      {profile.posts && profile.posts.map((post: Post) => (
+        <View 
+          key={post.id} 
+          style={styles.postContainer}
+          accessible={true}
+          accessibilityRole="none"
+          accessibilityLabel={`Post content: ${post.content}`}
+        >
+          {post.image_url && (
+            <Image
+              source={{ uri: post.image_url }}
+              style={styles.postImage}
+              resizeMode="cover"
+              accessible={true}
+              accessibilityLabel="Post image"
+            />
+          )}
+          <Text 
+            style={[styles.postContent, { color: theme.colors.text }]}
+            accessible={true}
+            accessibilityRole="text"
+          >
+            {post.content}
+          </Text>
+          <View 
+            style={styles.postActions}
+            accessible={true}
+            accessibilityRole="menubar"
+          >
+            <Pressable 
+              style={styles.actionButton}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={`Like post. ${post.likes || 0} likes`}
+            >
+              <Ionicons name="heart-outline" size={24} color={theme.colors.text} />
+              <Text style={[styles.actionText, { color: theme.colors.secondary }]}>
+                {post.likes || 0}
+              </Text>
+            </Pressable>
+            <Pressable 
+              style={styles.actionButton}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={`Comment on post. ${post.comments || 0} comments`}
+            >
+              <Ionicons name="chatbubble-outline" size={24} color={theme.colors.text} />
+              <Text style={[styles.actionText, { color: theme.colors.secondary }]}>
+                {post.comments || 0}
+              </Text>
+            </Pressable>
+            <Pressable 
+              style={styles.actionButton}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Share post"
+            >
+              <Ionicons name="share-outline" size={24} color={theme.colors.text} />
+            </Pressable>
+          </View>
+        </View>
+      ))}
+    </Animated.View>
+  );
+};
+
+const Feed: React.FC<FeedProps> = ({ currentUser }) => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [combinedData, setCombinedData] = useState<Profile[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const { theme } = useTheme();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // Fetch all profiles
   const fetchProfiles = async () => {
     try {
-      const { data, error } = await supabase.from('profiles').select('*');
-      if (error) {
-        console.error('Error fetching profiles:', error.message);
-        Alert.alert('Error', 'Could not fetch profiles.');
-      } else {
-        setProfiles(data || []);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred while fetching profiles.');
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setProfiles(data || []);
+    } catch (error: any) {
+      console.error('Error fetching profiles:', error.message);
+      Alert.alert('Error', 'Could not fetch profiles.');
     }
   };
 
-  // Fetch all posts
+  // Fetch all posts with user information
   const fetchPosts = async () => {
     try {
-      const { data, error } = await supabase.from('posts').select('*');
-      if (error) {
-        console.error('Error fetching posts:', error.message);
-        Alert.alert('Error', 'Could not fetch posts.');
-      } else {
-        setPosts(data || []);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred while fetching posts.');
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles:user_id (
+            id,
+            username,
+            full_name,
+            avatar_url
+          )
+        `)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (error: any) {
+      console.error('Error fetching posts:', error.message);
+      Alert.alert('Error', 'Could not fetch posts.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Combine profiles and posts based on the profile's ID
+  // Like a post
+  const handleLikePost = async (postId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      // First, check if user has already liked the post
+      const { data: existingLike, error: checkError } = await supabase
+        .from('likes')
+        .select('*')
+        .eq('post_id', postId)
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows returned
+        throw checkError;
+      }
+
+      if (existingLike) {
+        // Unlike the post
+        const { error: unlikeError } = await supabase
+          .from('likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', currentUser.id);
+
+        if (unlikeError) throw unlikeError;
+      } else {
+        // Like the post
+        const { error: likeError } = await supabase
+          .from('likes')
+          .insert([
+            { post_id: postId, user_id: currentUser.id }
+          ]);
+
+        if (likeError) throw likeError;
+      }
+
+      // Refresh posts to update like count
+      fetchPosts();
+    } catch (error: any) {
+      console.error('Error handling like:', error.message);
+      Alert.alert('Error', 'Could not process like.');
+    }
+  };
+
+  // Combine profiles and posts
   const combineProfilesAndPosts = () => {
     const combined = profiles.map((profile) => {
-      // Find posts for the current profile
-      const userPosts = posts.filter((post) => post.user_id === profile.id); // Adjust this based on your schema
+      const userPosts = posts.filter((post) => post.user_id === profile.id);
       return {
         ...profile,
-        posts: userPosts, // Attach the posts to the profile
+        posts: userPosts,
       };
     });
     setCombinedData(combined);
   };
 
-  // UseEffect
   useEffect(() => {
     fetchProfiles();
     fetchPosts();
   }, []);
 
-  // Combine profiles and posts
   useEffect(() => {
     if (profiles.length > 0 && posts.length > 0) {
-      combineProfilesAndPosts(); // Combine data after both profiles and posts are fetched
+      combineProfilesAndPosts();
     }
   }, [profiles, posts]);
 
@@ -108,83 +310,23 @@ const Feed = () => {
     setRefreshing(false);
   }, []);
 
-  const renderPostItem = ({ item: profile }: { item: Profile }) => {
-    return (
-      <Pressable 
-        style={[styles.profileContainer, { backgroundColor: theme.colors.background }]}
-        android_ripple={{ color: theme.colors.border }}
-      >
-        <View style={styles.profileHeader}>
-          <View style={styles.profileInfo}>
-            <Image
-              source={profile.avatar_url 
-                ? { uri: profile.avatar_url } 
-                : require('../../assets/default-avatar.png')}
-              style={styles.profileImage}
-            />
-            <View style={styles.nameContainer}>
-              <Text style={[styles.profileName, { color: theme.colors.text }]}>
-                {profile.full_name || 'Full Name'}
-              </Text>
-              <Text style={[styles.username, { color: theme.colors.secondary }]}>
-                {profile.username || 'user'}
-              </Text>
-            </View>
-          </View>
-          <Pressable style={styles.moreButton}>
-            <Ionicons name="ellipsis-horizontal" size={24} color={theme.colors.text} />
-          </Pressable>
-        </View>
-
-        {profile.posts && profile.posts.map((post: Post) => (
-          <View key={post.id} style={styles.postContainer}>
-            {post.image_url && (
-              <Image
-                source={{ uri: post.image_url }}
-                style={styles.postImage}
-                resizeMode="cover"
-              />
-            )}
-            <Text style={[styles.postContent, { color: theme.colors.text }]}>
-              {post.content}
-            </Text>
-            <View style={styles.postActions}>
-              <Pressable style={styles.actionButton}>
-                <Ionicons name="heart-outline" size={24} color={theme.colors.text} />
-                <Text style={[styles.actionText, { color: theme.colors.secondary }]}>
-                  {post.likes || 0}
-                </Text>
-              </Pressable>
-              <Pressable style={styles.actionButton}>
-                <Ionicons name="chatbubble-outline" size={24} color={theme.colors.text} />
-                <Text style={[styles.actionText, { color: theme.colors.secondary }]}>
-                  {post.comments || 0}
-                </Text>
-              </Pressable>
-              <Pressable style={styles.actionButton}>
-                <Ionicons name="share-outline" size={24} color={theme.colors.text} />
-              </Pressable>
-            </View>
-          </View>
-        ))}
-      </Pressable>
-    );
+  const handleError = (error: any) => {
+    console.error('Error:', error);
+    Alert.alert('Error', error.message || 'An unexpected error occurred');
   };
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={[styles.loadingText, { color: theme.colors.text }]}>
-          Loading your feed...
-        </Text>
-      </View>
-    );
+    return <LoadingState message="Loading your feed..." fullscreen />;
   }
 
   if (combinedData.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
+      <View 
+        style={styles.emptyContainer}
+        accessible={true}
+        accessibilityRole="text"
+        accessibilityLabel="No posts available"
+      >
         <Ionicons name="newspaper-outline" size={48} color={theme.colors.secondary} />
         <Text style={[styles.emptyText, { color: theme.colors.text }]}>
           No posts yet
@@ -196,23 +338,38 @@ const Feed = () => {
     );
   }
 
+  const renderItem = ({ item, index }: { item: Profile; index: number }) => (
+    <FeedItem 
+      profile={item} 
+      fadeAnim={new Animated.Value(0)} 
+    />
+  );
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <FlatList
-        data={combinedData}
-        renderItem={renderPostItem}
-        keyExtractor={(item) => item.id}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.colors.primary}
-          />
-        }
-        ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />}
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+    <ErrorBoundary onRetry={fetchPosts}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <FlatList
+          data={combinedData}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.colors.primary}
+            />
+          }
+          ItemSeparatorComponent={() => (
+            <View 
+              style={[styles.separator, { backgroundColor: theme.colors.border }]} 
+              accessible={false}
+            />
+          )}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+        />
+      </View>
+    </ErrorBoundary>
   );
 };
 
@@ -320,6 +477,9 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     opacity: 0.1,
+  },
+  listContent: {
+    paddingVertical: 8,
   },
 });
 

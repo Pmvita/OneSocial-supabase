@@ -8,8 +8,6 @@
 *** Thanks again! Now go create something AMAZING! :D
 -->
 
-
-
 <!-- PROJECT SHIELDS -->
 <!--
 *** I'm using markdown "reference style" links for readability.
@@ -25,8 +23,6 @@
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
-
-
 
 <!-- PROJECT LOGO -->
 <br />
@@ -52,8 +48,6 @@
     <a href="https://github.com/github_username/repo_name/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
-
-
 
 <!-- TABLE OF CONTENTS -->
 <details>
@@ -81,18 +75,32 @@
   </ol>
 </details>
 
-
-
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
 [![Product Name Screen Shot][product-screenshot]](https://example.com)
 
-This project is a cross-platform Social media, messaging, and crypto wallet app built using React Native and Expo. It features supabase authentication, messaging, and wallet functionality.
+This project is a cross-platform Social media, messaging, and crypto wallet app built using React Native and Expo. It features:
+
+- Full authentication system using Supabase
+- Real-time messaging capabilities
+- Integrated crypto wallet functionality
+- Customizable user profiles
+- Dark/Light theme support
+- Animated UI components
+- Cross-platform compatibility (iOS & Android)
+- Accessibility features
+- Push notifications
+
+Recent Updates:
+- Added theme context for dynamic theming
+- Implemented animated feed components
+- Enhanced accessibility with ARIA labels and roles
+- Added profile image handling
+- Improved post interaction UI
+- Added real-time updates for posts and messages
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 ### Built With
 
@@ -100,17 +108,8 @@ This project is a cross-platform Social media, messaging, and crypto wallet app 
 * [![ReactNative][ReactNative.js]][ReactNative-url]
 * [![Expo][Expo.io]][Expo-url]
 * [![Supabase][Supabase.io]][Supabase-url]
-<!-- * [![Next][Next.js]][Next-url] -->
-<!-- * [![Vue][Vue.js]][Vue-url] -->
-<!-- * [![Angular][Angular.io]][Angular-url] -->
-<!-- * [![Svelte][Svelte.dev]][Svelte-url] -->
-<!-- * [![Laravel][Laravel.com]][Laravel-url] -->
-<!-- * [![Bootstrap][Bootstrap.com]][Bootstrap-url] -->
-<!-- * [![JQuery][JQuery.com]][JQuery-url] -->
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- GETTING STARTED -->
 ## Getting Started
@@ -147,8 +146,13 @@ To get a local copy up and running follow these simple example steps.
    git remote set-url origin github_username/repo_name
    git remote -v # confirm the changes
    ```
-4. Change the supabasefile.ts file to match your supabase project details:
-  - lib/supabase
+4. Configure environment variables:
+   - Create a `.env` file in the root directory
+   - Add your Supabase configuration:
+     ```
+     SUPABASE_URL=your_supabase_url
+     SUPABASE_ANON_KEY=your_anon_key
+     ```
 5. Start the app
    ```sh
    yarn start
@@ -156,15 +160,12 @@ To get a local copy up and running follow these simple example steps.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
 <!-- USAGE EXAMPLES -->
 ## Usage
 
 <div align="center">
   <table>
     <tr>
-    <!-- Cross-platform Welcome Screen -->
       <td>
         <img 
           src="./images/ios-ss1.png" 
@@ -179,7 +180,6 @@ To get a local copy up and running follow these simple example steps.
           height="auto"
         />
       </td>
-      <!-- Cross-platform Login Screen -->
       <td>
         <img
           src="./images/ios-ss2.png" 
@@ -194,7 +194,6 @@ To get a local copy up and running follow these simple example steps.
           height="auto"
         />
       </td>
-      <!-- Cross-platform Sign-Up Screen -->
       <td>
         <img
           src="./images/ios-ss3.png"
@@ -209,7 +208,6 @@ To get a local copy up and running follow these simple example steps.
           height="auto"
         />
       </td>
-      <!-- Cross-platform ForgotPassword Screen -->
       <td>
         <img src="./images/ios-ss4.png" 
           alt="iOS Forgot Password Screen"
@@ -223,7 +221,6 @@ To get a local copy up and running follow these simple example steps.
         />
       </td>
     </tr>
-    <!-- Cross-platform Home Screen -->
     <tr>
       <td>
         <img
@@ -239,7 +236,6 @@ To get a local copy up and running follow these simple example steps.
           height="auto"
         />
       </td>
-      <!-- Cross-platform Messages Screen -->
       <td>
         <img 
           src="./images/ios-ss6.png"
@@ -254,7 +250,6 @@ To get a local copy up and running follow these simple example steps.
           height="auto"
         />
       </td>
-      <!-- Cross-platform Wallet Screen -->
       <td>
         <img 
           src="./images/ios-ss7.png"
@@ -269,7 +264,6 @@ To get a local copy up and running follow these simple example steps.
           height="auto"
         />
       </td>
-      <!-- Cross-platform Settings Screen -->
       <td>
         <img
           src="./images/ios-ss8.png"
@@ -292,39 +286,45 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
 <!-- ROADMAP -->
 ## Roadmap
 
-- [ ] **Feature 1**: *Authentication*
-  - Supabase: Email and password authentication.
-- [ ] **Feature 2**: *Real-time Database*
-  - Supabase: Real-time updates.
-- [ ] **Feature 3**: *Crypto Wallet*:  
-   - Supabase: Wallet functionality.
-   - Supabase: Crypto balance.
-   - Updatable balance withing db.
-- [ ] **Feature 4**: *Notifications*:  
-   - Push notifications using Expo.
-   - Toast notifications.
-- [ ] **Feature 5**: *Cloud Functions*:  
-   - Supabase: Cloud functions.
-- [ ] **Feature 6**: *Image Upload*:  
-   - Supabase: Image upload.
-   - Within settings you can upload your profile picture, using a link.
-- [ ] **UI Feature's**:
-   - React Animated
-   - CSS Animation's & Transition's
-   - Loader component
-   - Bottom Tabs
-   - Vector Icons
+- [x] **Feature 1**: *Authentication*
+  - Implemented Supabase email and password authentication
+  - Added social authentication options
+  - Secure session management
+- [x] **Feature 2**: *Real-time Database*
+  - Real-time updates for posts and messages
+  - Optimistic UI updates
+  - Offline data persistence
+- [x] **Feature 3**: *Crypto Wallet*
+  - Integrated wallet functionality
+  - Real-time balance updates
+  - Transaction history
+  - Secure storage
+- [x] **Feature 4**: *Notifications*
+  - Push notifications using Expo
+  - In-app notifications
+  - Custom toast notifications
+- [x] **Feature 5**: *Cloud Functions*
+  - Serverless functions for complex operations
+  - Automated tasks and triggers
+- [x] **Feature 6**: *Image Upload*
+  - Profile picture upload and management
+  - Post image handling
+  - Image optimization
+- [x] **UI Features**:
+  - Implemented React Animated components
+  - Added CSS animations & transitions
+  - Created custom loader components
+  - Designed bottom tab navigation
+  - Integrated vector icons
+  - Added theme support
+  - Enhanced accessibility
 
 See the [open issues](https://github.com/github_username/repo_name/issues) for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -344,23 +344,6 @@ Don't forget to give the project a star! Thanks again!
 
 ### Top contributors:
 
-<!--
-<a href="https://github.com/github_username/repo_name/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=github_username/repo_name" alt="contrib.rocks image" />
-</a>
--->
-
-
-
-<!-- LICENSE -->
-## License
-
-Distributed under the MIT License. See `LICENSE.txt` for more information.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
 <!-- CONTACT -->
 ## Contact
 
@@ -370,18 +353,14 @@ Project Link: [https://github.com/Pmvita/OneSocial-supabase.git](https://github.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-* []()
-* []()
-* []()
+* [React Native Documentation](https://reactnative.dev/)
+* [Expo Documentation](https://docs.expo.dev/)
+* [Supabase Documentation](https://supabase.io/docs)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
@@ -408,15 +387,3 @@ Project Link: [https://github.com/Pmvita/OneSocial-supabase.git](https://github.
 [Expo-url]: https://docs.expo.dev/guides/overview/#expo-router
 [Supabase.io]: https://img.shields.io/badge/Supabase-00C7B7?style=for-the-badge&logo=supabase&logoColor=white
 [Supabase-url]: https://supabase.io
-[Vue.js]: https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D
-[Vue-url]: https://vuejs.org/
-[Angular.io]: https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white
-[Angular-url]: https://angular.io/
-[Svelte.dev]: https://img.shields.io/badge/Svelte-4A4A55?style=for-the-badge&logo=svelte&logoColor=FF3E00
-[Svelte-url]: https://svelte.dev/
-[Laravel.com]: https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white
-[Laravel-url]: https://laravel.com
-[Bootstrap.com]: https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white
-[Bootstrap-url]: https://getbootstrap.com
-[JQuery.com]: https://img.shields.io/badge/jQuery-0769AD?style=for-the-badge&logo=jquery&logoColor=white
-[JQuery-url]: https://jquery.com 

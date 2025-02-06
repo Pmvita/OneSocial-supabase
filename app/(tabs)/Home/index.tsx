@@ -5,54 +5,77 @@ import {
   Text, 
   StyleSheet, 
   Alert, 
-  ActivityIndicator, 
   Image, 
   TouchableOpacity, 
   Dimensions,
   Platform,
+  ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import supabase from '../../../lib/supabase'; // Adjust the import as necessary
-
-// Import Theme
-import { useTheme } from '../../../context/ThemeContext'; // Adjust the path as needed
-
-// Import Icons
+import supabase from '../../../lib/supabase';
+import { useTheme } from '../../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-
-// Import Components
 import Feed from '../../../components/UI/Feed';
-import CustomButton from '../../../components/UI/CustomButton';
+import LoadingState from '../../../components/UI/LoadingState';
+import ErrorBoundary from '../../../components/UI/ErrorBoundary';
 
-
-// Screen Dimensions
 const { width } = Dimensions.get('window');
-const profilePicSize = width * 0.25; // 25% of the screen width for profile picture
+const STORY_SIZE = width * 0.15;
+const HEADER_HEIGHT = Platform.OS === 'ios' ? 44 : 56;
+
+type RootStackParamList = {
+  Story: { storyId: string };
+  CreatePost: undefined;
+  Notifications: undefined;
+  Messages: undefined;
+  CreateStory: undefined;
+  Profile: undefined;
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+interface Story {
+  id: string;
+  user_id: string;
+  image_url: string;
+  created_at: string;
+  viewed: boolean;
+}
+
+interface UserProfile {
+  id: string;
+  username: string;
+  full_name: string;
+  avatar_url?: string;
+  bio?: string;
+  stories?: Story[];
+}
 
 const HomeScreen = () => {
-  const navigation = useNavigation();
-  const { theme } = useTheme(); // Access theme
+  const navigation = useNavigation<NavigationProp>();
+  const { theme } = useTheme();
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [stories, setStories] = useState<Story[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Fetch authenticated user
   const fetchUser = async () => {
     try {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        throw new Error(error.message);
-      }
-      setUser(data.user);
-      fetchProfile(data.user.id);
+      const { data: { user: authUser }, error } = await supabase.auth.getUser();
+      if (error) throw error;
+      if (!authUser) throw new Error('No user found');
+      setUser(authUser);
+      await fetchProfile(authUser.id);
     } catch (error: any) {
       console.error('Error fetching user:', error.message);
       Alert.alert('Error', 'Could not fetch user information.');
     }
   };
 
-  // Fetch user profile from the "profiles" table
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -60,81 +83,162 @@ const HomeScreen = () => {
         .select('*')
         .eq('id', userId)
         .single();
-      if (error) {
-        throw new Error(error.message);
-      }
+      if (error) throw error;
       setProfile(data);
-      setLoading(false);
     } catch (error: any) {
       console.error('Error fetching profile:', error.message);
-      Alert.alert('Error', 'Could not fetch profile information.');
     }
   };
 
-  // Handle token expiration and refresh
-  const handleAuthStateChange = () => {
-    const { subscription } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-      }
-    });
-    return () => {
-      subscription.unsubscribe();
-    };
+  const fetchStories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('stories')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setStories(data || []);
+    } catch (error: any) {
+      console.error('Error fetching stories:', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
   useEffect(() => {
-    handleAuthStateChange(); // Listen for auth state changes
-    fetchUser(); // Fetch user initially
+    fetchUser();
+    fetchStories();
   }, []);
-  if (loading) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text style={styles.info}>Loading user and profile information...</Text>
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchUser(), fetchStories()]);
+    setRefreshing(false);
+  };
+
+  const StoryCircle = ({ story, isOwn = false }: { story: Story; isOwn?: boolean }) => (
+    <TouchableOpacity
+      style={styles.storyContainer}
+      onPress={() => navigation.navigate('Story', { storyId: story.id })}
+      accessible={true}
+      accessibilityLabel={`View ${isOwn ? 'your' : 'user'} story`}
+      accessibilityRole="button"
+    >
+      <View style={[
+        styles.storyRing,
+        { borderColor: story.viewed ? theme.colors.border : theme.colors.primary }
+      ]}>
+        <Image
+          source={{ uri: story.image_url }}
+          style={styles.storyImage}
+        />
       </View>
-    );
+      <Text style={[styles.storyUsername, { color: theme.colors.text }]} numberOfLines={1}>
+        {isOwn ? 'Your Story' : profile?.username}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  if (loading) {
+    return <LoadingState message="Loading your feed..." fullscreen />;
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: 20 }]}>
-      {/* Header */}
-      <Text style={[styles.title, { color: theme.colors.title }]}>OneSocial</Text>
-      <TouchableOpacity
-        style={styles.iconButton}
-        onPress={() => navigation.navigate('Notifications')}
-        accessibilityLabel="Go to Notifications"
-        accessible
-        importantForAccessibility="yes"
-      >
-        <Ionicons name="notifications" size={30} color={theme.colors.text} />
-      </TouchableOpacity>
-
-      {user ? (
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <ErrorBoundary>
+        {/* User Profile Header */}
         <View style={styles.header}>
-          {profile ? (
-            <>
-              <TouchableOpacity onPress={() => navigation.navigate('CreatePost')}>
-                <Image
-                  source={profile.profilePic ? { uri: profile.profilePic } : require('../../../assets/splash-icon.png')}
-                  style={styles.profilePic}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-              <View style={styles.profileDetails}>
-                <Text style={[styles.name, { color: theme.colors.text }]}>Name: {profile.name}</Text>
-                <Text style={[styles.username, { color: theme.colors.text }]}>Username: {profile.username}</Text>
-                <Text style={[styles.bio, { color: theme.colors.text }]}>Bio: {profile.bio}</Text>
+          <View style={styles.userInfo}>
+            <TouchableOpacity 
+              style={styles.avatarContainer}
+              onPress={() => navigation.navigate('Profile')}
+              accessible={true}
+              accessibilityLabel="View your profile"
+              accessibilityRole="button"
+            >
+              <Image
+                source={profile?.avatar_url 
+                  ? { uri: profile.avatar_url }
+                  : require('../../../assets/default-avatar.png')}
+                style={styles.avatar}
+              />
+              <View style={styles.userTextInfo}>
+                <Text style={[styles.userName, { color: theme.colors.text }]}>
+                  {profile?.full_name || 'Loading...'}
+                </Text>
+                <Text style={[styles.userHandle, { color: theme.colors.textSecondary }]}>
+                  @{profile?.username || 'username'}
+                </Text>
               </View>
-            </>
-          ) : (
-            <Text style={[styles.info, { color: theme.colors.text }]}>Profile not found.</Text>
-          )}
+            </TouchableOpacity>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => navigation.navigate('CreatePost')}
+              accessibilityLabel="Create new post"
+            >
+              <Ionicons name="add-circle-outline" size={26} color={theme.colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => navigation.navigate('Notifications')}
+              accessibilityLabel="View notifications"
+            >
+              <Ionicons name="notifications-outline" size={26} color={theme.colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => navigation.navigate('Messages')}
+              accessibilityLabel="View messages"
+            >
+              <Ionicons name="paper-plane-outline" size={26} color={theme.colors.text} />
+            </TouchableOpacity>
+          </View>
         </View>
-      ) : (
-        <Text style={[styles.info, { color: theme.colors.text }]}>Loading user information...</Text>
-      )}
-      {/* User Specific Feed */}
-      <Feed user={user} />
+
+        <ScrollView
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {/* Stories Section */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.storiesContainer}
+            contentContainerStyle={styles.storiesContent}
+          >
+            {/* Add Story Button */}
+            <TouchableOpacity
+              style={styles.addStoryContainer}
+              onPress={() => navigation.navigate('CreateStory')}
+              accessible={true}
+              accessibilityLabel="Create new story"
+              accessibilityRole="button"
+            >
+              <View style={[styles.addStoryButton, { backgroundColor: theme.colors.primary }]}>
+                <Ionicons name="add" size={24} color="white" />
+              </View>
+              <Text style={[styles.storyUsername, { color: theme.colors.text }]}>
+                Add Story
+              </Text>
+            </TouchableOpacity>
+
+            {/* Stories List */}
+            {stories.map((story) => (
+              <StoryCircle
+                key={story.id}
+                story={story}
+                isOwn={story.user_id === user?.id}
+              />
+            ))}
+          </ScrollView>
+
+          {/* Feed with user prop */}
+          <Feed currentUser={user} />
+        </ScrollView>
+      </ErrorBoundary>
     </SafeAreaView>
   );
 };
@@ -143,64 +247,89 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    marginLeft: 10,
-    marginBottom: 10,
-    fontWeight: '900',
-    fontFamily: 'serif',
-    fontStyle: 'italic',
-  },
   header: {
+    height: HEADER_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 5,
-    marginHorizontal: 5,
-    borderBottomColor: '#E0E0E0',
-    borderBottomWidth: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
   },
-  profilePic: {
-    width: profilePicSize,
-    height: profilePicSize,
-    borderRadius: profilePicSize / 2,
-    borderColor: '#E0E0E0',
-    borderWidth: 2,
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  profileDetails: {
-    marginLeft: 20,
+  avatarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  userTextInfo: {
+    justifyContent: 'center',
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  userHandle: {
+    fontSize: 14,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   iconButton: {
-    position: 'absolute',
-    right: 15,
-    top: Platform.OS === 'ios' ? 60 : 30,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 50,
+    padding: 8,
+    marginLeft: 8,
+  },
+  storiesContainer: {
+    height: STORY_SIZE + 60,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  storiesContent: {
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+  },
+  storyContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    width: 50,
-    height: 50,
+    marginHorizontal: 8,
+    width: STORY_SIZE,
   },
-  name: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  storyRing: {
+    width: STORY_SIZE,
+    height: STORY_SIZE,
+    borderRadius: STORY_SIZE / 2,
+    borderWidth: 2,
+    padding: 2,
   },
-  username: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    fontFamily: 'Times New Roman',
+  storyImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: (STORY_SIZE - 4) / 2,
   },
-  bio: {
-    fontSize: 16,
-    fontFamily: 'Times New Roman',
-  },
-  info: {
+  storyUsername: {
+    fontSize: 12,
+    marginTop: 4,
     textAlign: 'center',
-    fontSize: 16,
+  },
+  addStoryContainer: {
+    alignItems: 'center',
+    marginHorizontal: 8,
+    width: STORY_SIZE,
+  },
+  addStoryButton: {
+    width: STORY_SIZE,
+    height: STORY_SIZE,
+    borderRadius: STORY_SIZE / 2,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
