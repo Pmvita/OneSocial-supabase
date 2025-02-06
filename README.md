@@ -314,6 +314,8 @@ _For more examples, please refer to the [Documentation](https://example.com)_
    - Supabase: Image upload.
    - Within settings you can upload your profile picture, using a link.
 - [ ] **UI Feature's**:
+   - React Animated
+   - CSS Animation's & Transition's
    - Loader component
    - Bottom Tabs
    - Vector Icons
