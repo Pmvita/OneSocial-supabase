@@ -1,17 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, Alert, Platform } from 'react-native';
-import supabase from '../../lib/supabase'; // Adjust the path as necessary
-
-// Import Theme
-import { useTheme } from '../../context/ThemeContext'; // Adjust the path as needed
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  FlatList, 
+  Image, 
+  Alert, 
+  Platform,
+  RefreshControl,
+  ActivityIndicator,
+  Pressable,
+  Animated
+} from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+import supabase from '../../lib/supabase';
+import { useTheme } from '../../context/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
+
+interface Profile {
+  id: string;
+  full_name?: string;
+  username?: string;
+  avatar_url?: string;
+  posts: Post[];
+}
+
+interface Post {
+  id: string;
+  content: string;
+  image_url?: string;
+  likes?: number;
+  comments?: number;
+  user_id: string;
+}
 
 const Feed = () => {
-  const [profiles, setProfiles] = useState<any[]>([]);
-  const [posts, setPosts] = useState<any[]>([]);
-  const [combinedData, setCombinedData] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [combinedData, setCombinedData] = useState<Profile[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const { theme } = useTheme(); // Access theme
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const { theme } = useTheme();
 
   // Fetch all profiles
   const fetchProfiles = async () => {
@@ -73,11 +102,82 @@ const Feed = () => {
     }
   }, [profiles, posts]);
 
-  // Loading
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchProfiles(), fetchPosts()]);
+    setRefreshing(false);
+  }, []);
+
+  const renderPostItem = ({ item: profile }: { item: Profile }) => {
+    return (
+      <Pressable 
+        style={[styles.profileContainer, { backgroundColor: theme.colors.background }]}
+        android_ripple={{ color: theme.colors.border }}
+      >
+        <View style={styles.profileHeader}>
+          <View style={styles.profileInfo}>
+            <Image
+              source={profile.avatar_url 
+                ? { uri: profile.avatar_url } 
+                : require('../../assets/default-avatar.png')}
+              style={styles.profileImage}
+            />
+            <View style={styles.nameContainer}>
+              <Text style={[styles.profileName, { color: theme.colors.text }]}>
+                {profile.full_name || 'Full Name'}
+              </Text>
+              <Text style={[styles.username, { color: theme.colors.secondary }]}>
+                {profile.username || 'user'}
+              </Text>
+            </View>
+          </View>
+          <Pressable style={styles.moreButton}>
+            <Ionicons name="ellipsis-horizontal" size={24} color={theme.colors.text} />
+          </Pressable>
+        </View>
+
+        {profile.posts && profile.posts.map((post: Post) => (
+          <View key={post.id} style={styles.postContainer}>
+            {post.image_url && (
+              <Image
+                source={{ uri: post.image_url }}
+                style={styles.postImage}
+                resizeMode="cover"
+              />
+            )}
+            <Text style={[styles.postContent, { color: theme.colors.text }]}>
+              {post.content}
+            </Text>
+            <View style={styles.postActions}>
+              <Pressable style={styles.actionButton}>
+                <Ionicons name="heart-outline" size={24} color={theme.colors.text} />
+                <Text style={[styles.actionText, { color: theme.colors.secondary }]}>
+                  {post.likes || 0}
+                </Text>
+              </Pressable>
+              <Pressable style={styles.actionButton}>
+                <Ionicons name="chatbubble-outline" size={24} color={theme.colors.text} />
+                <Text style={[styles.actionText, { color: theme.colors.secondary }]}>
+                  {post.comments || 0}
+                </Text>
+              </Pressable>
+              <Pressable style={styles.actionButton}>
+                <Ionicons name="share-outline" size={24} color={theme.colors.text} />
+              </Pressable>
+            </View>
+          </View>
+        ))}
+      </Pressable>
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading profiles...</Text>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={[styles.loadingText, { color: theme.colors.text }]}>
+          Loading your feed...
+        </Text>
       </View>
     );
   }
@@ -85,49 +185,32 @@ const Feed = () => {
   if (combinedData.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No profiles available.</Text>
+        <Ionicons name="newspaper-outline" size={48} color={theme.colors.secondary} />
+        <Text style={[styles.emptyText, { color: theme.colors.text }]}>
+          No posts yet
+        </Text>
+        <Text style={[styles.emptySubtext, { color: theme.colors.secondary }]}>
+          Be the first one to share something!
+        </Text>
       </View>
     );
   }
 
-  // Return the Feed
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <FlatList
         data={combinedData}
-        renderItem={({ item }) => (
-          <View style={styles.profileContainer}>
-            <Image
-              source={item.profilePic ? { uri: item.profilePic } : require('../../images/placeholder.png')}
-              style={styles.profilePic}
-            />
-            <View>
-              <Text style={[styles.username, { color: theme.colors.text }]}>{item.username || 'unknown...'}</Text>
-              {item.lastActive && (
-                <Text style={styles.lastActive}>
-                  {item.lastActive} ago
-                </Text>
-              )}
-              {item.writtenPost && 
-              <ScrollView>
-                <Text style={styles.writtenPost}>
-                  {item.writtenPost}
-                  {item.writtenPost.length > 100 ? '...' : ''}
-                </Text>
-              </ScrollView>
-              }
-              <Text>
-                Post Description: {item.postDescription || 'No description'}
-              </Text>
-            </View>
-          </View>
-        )}
-        keyExtractor={(item) => item.id.toString()} // Ensure 'id' is unique for each profile
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No profiles available.</Text>
-          </View>
+        renderItem={renderPostItem}
+        keyExtractor={(item) => item.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+          />
         }
+        ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );
@@ -135,9 +218,6 @@ const Feed = () => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    //height: '100%',
     flex: 1,
   },
   loadingContainer: {
@@ -146,50 +226,100 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    fontSize: 18,
-    color: '#333',
+    marginTop: 12,
+    fontSize: 16,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   emptyText: {
-    fontSize: 18,
-    color: '#333',
+    fontSize: 20,
+    fontWeight: '600',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 16,
+    marginTop: 8,
   },
   profileContainer: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    padding: 16,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  profilePic: {
+  profileHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  profileInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileImage: {
     width: 40,
     height: 40,
-    borderRadius: 25,
-    borderColor: '#E0E0E0',
-    borderWidth: 2,
-    marginLeft: 5,
-    
+    borderRadius: 20,
+  },
+  nameContainer: {
+    marginLeft: 12,
+  },
+  profileName: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   username: {
-    position: 'absolute',
-    left: 50,
-    top: -40,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  lastActive: {
-    position: 'absolute',
-    fontSize: 12,
-    color: '#888',
-    left: 50,
-    top: Platform.OS === 'ios' ? -20 : -15,
-  },
-  writtenPost: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 8,
+  },
+  moreButton: {
+    padding: 8,
+  },
+  postContainer: {
+    marginTop: 12,
+  },
+  postImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  postContent: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  postActions: {
+    flexDirection: 'row',
+    marginTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 16,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 24,
+  },
+  actionText: {
+    marginLeft: 6,
+    fontSize: 14,
+  },
+  separator: {
+    height: 1,
+    opacity: 0.1,
   },
 });
 
