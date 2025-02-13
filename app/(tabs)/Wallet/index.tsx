@@ -107,7 +107,7 @@ const Wallet = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore,  setHasMore] = useState(true);
 
   useEffect(() => {
     const loadInitialData = async () => {
